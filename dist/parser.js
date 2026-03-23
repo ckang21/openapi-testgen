@@ -1,35 +1,22 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
-import type { OpenAPI, OpenAPIV3, OpenAPIV2 } from 'openapi-types';
-
-export interface ParsedEndpoint {
-    path: string;
-    method: string;
-    summary: string;
-    parameters: string[];
-    responses: string[];
-}
-
-export async function parseSpec(specPath: string): Promise<ParsedEndpoint[]> {
+export async function parseSpec(specPath) {
     const api = await SwaggerParser.validate(specPath);
-    const endpoints: ParsedEndpoint[] = [];
+    const endpoints = [];
     const paths = api.paths ?? {};
-
     for (const path in paths) {
         const pathItem = paths[path];
-        if (!pathItem) continue;
-        
-        const methods = ['get', 'post', 'put', 'patch', 'delete'] as const;
-
+        if (!pathItem)
+            continue;
+        const methods = ['get', 'post', 'put', 'patch', 'delete'];
         for (const method of methods) {
             const operation = pathItem[method];
-            if (!operation) continue;
-
+            if (!operation)
+                continue;
             const parameters = (operation.parameters ?? []).map((p) => {
-                const param = p as OpenAPIV3.ParameterObject | OpenAPIV2.Parameter;
+                const param = p;
                 return param.name;
             });
-
-            const responses = Object.keys(operation.responses ?? {})
+            const responses = Object.keys(operation.responses ?? {});
             endpoints.push({
                 path,
                 method,
@@ -41,3 +28,4 @@ export async function parseSpec(specPath: string): Promise<ParsedEndpoint[]> {
     }
     return endpoints;
 }
+//# sourceMappingURL=parser.js.map
