@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { parseSpec } from './parser.js';
 import { generateTests } from './generator.js';
+import { writeOutputFile } from './utils/fileWriter.js';
 const program = new Command();
 program
     .name('openapi-testgen')
@@ -14,8 +15,18 @@ program
     .action(async (spec, options) => {
     console.log(`Parsing spec: ${spec}...`);
     const endpoints = await parseSpec(spec);
-    const output = generateTests(endpoints, options.format);
-    console.log(output);
+    const groups = {};
+    for (const endpoint of endpoints) {
+        const resource = endpoint.path.split('/')[1] ?? 'root';
+        if (!groups[resource])
+            groups[resource] = [];
+        groups[resource].push(endpoint);
+    }
+    for (const [resource, resourceEndpoints] of Object.entries(groups)) {
+        const output = generateTests(resourceEndpoints, options.format);
+        const filename = `${resource}.test.ts`;
+        await writeOutputFile(options.out, filename, output);
+    }
 });
 program.parse(process.argv);
 //# sourceMappingURL=cli.js.map
