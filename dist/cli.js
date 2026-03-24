@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import { parseSpec } from './parser.js';
+import { generateTests } from './generator.js';
 const program = new Command();
 program
     .name('openapi-testgen')
@@ -9,10 +11,11 @@ program
     .description('Generate test stubs from a URL or file')
     .option('--format <format>', 'Output format: jest, vitest, or yaml', 'jest')
     .option('--out <dir>', 'Output directory', './generated')
-    .action((spec, options) => {
-    console.log('Spec:', spec);
-    console.log('Format:', options.format);
-    console.log('Output:', options.out);
+    .action(async (spec, options) => {
+    console.log(`Parsing spec: ${spec}...`);
+    const endpoints = await parseSpec(spec);
+    const output = generateTests(endpoints, options.format);
+    console.log(output);
 });
 program.parse(process.argv);
 //# sourceMappingURL=cli.js.map

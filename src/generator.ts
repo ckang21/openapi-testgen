@@ -15,12 +15,12 @@ export function generateTests(endpoints: ParsedEndpoint[], format: string): stri
         for (const status of endpoint.responses) {
             lines.push(`  it('should return ${status}', async () => {`);
             lines.push(`    const response = await request.${endpoint.method}('${endpoint.path}');`);
-            lines.push(`    expect(response.status).toBe(${status});`);
+            lines.push(`    expect(response.status).toBe(${isNaN(Number(status)) ? `'${status}'` : status});`);
             lines.push(`  });`);
             lines.push('');
         }
+        lines.push('});');
+        lines.push('');
     }
-    lines.push('});');
-    lines.push('');
     return lines.join('\n');
 }
