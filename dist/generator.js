@@ -1,22 +1,11 @@
+import { formatJest } from './formatters/jest.js';
+import { formatVitest } from './formatters/vitest.js';
+import { formatYaml } from './formatters/yaml.js';
 export function generateTests(endpoints, format) {
-    const lines = [];
-    const importLine = format === 'jest'
-        ? `import { describe, it, expect } from '@jest/globals';`
-        : `import { describe, it, expect } from 'vitest';`;
-    lines.push(importLine);
-    lines.push('');
-    for (const endpoint of endpoints) {
-        lines.push(`describe('${endpoint.method.toUpperCase()} ${endpoint.path}', () => {`);
-        for (const status of endpoint.responses) {
-            lines.push(`  it('should return ${status}', async () => {`);
-            lines.push(`    const response = await request.${endpoint.method}('${endpoint.path}');`);
-            lines.push(`    expect(response.status).toBe(${isNaN(Number(status)) ? `'${status}'` : status});`);
-            lines.push(`  });`);
-            lines.push('');
-        }
-        lines.push('});');
-        lines.push('');
-    }
-    return lines.join('\n');
+    if (format === 'jest')
+        return formatJest(endpoints);
+    if (format === 'yaml')
+        return formatYaml(endpoints);
+    return formatVitest(endpoints);
 }
 //# sourceMappingURL=generator.js.map
