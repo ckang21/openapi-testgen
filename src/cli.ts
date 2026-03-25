@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { parseSpec } from './parser.js';
 import { generateTests } from './generator.js';
 import { writeOutputFile } from './utils/fileWriter.js';
+import { startSpinner, success, error } from './utils/logger.js';
 
 const program = new Command();
 
@@ -17,23 +18,25 @@ program
     .option('--out <dir>', 'Output directory', './generated')
     .action(async (spec, options) => {
         try {
-            console.log(`Parsing spec: ${spec}...`);
+            const spinner = startSpinner(`Parsing spec: ${spec}...`);
             const endpoints = await parseSpec(spec);
+            spinner.succeed('Spec parsed successfully');
 
             const groups: Record<string, typeof endpoints> = {};
             for (const endpoint of endpoints) {
-            const resource = endpoint.path.split('/')[1] ?? 'root';
-            if (!groups[resource]) groups[resource] = [];
-            groups[resource].push(endpoint);
+                const resource = endpoint.path.split('/')[1] ?? 'root';
+                if (!groups[resource]) groups[resource] = [];
+                groups[resource].push(endpoint);
             }
 
             for (const [resource, resourceEndpoints] of Object.entries(groups)) {
-            const output = generateTests(resourceEndpoints, options.format);
-            const filename = `${resource}.test.ts`;
-            await writeOutputFile(options.out, filename, output);
+                const output = generateTests(resourceEndpoints, options.format);
+                const filename = `${resource}.test.ts`;
+                await writeOutputFile(options.out, filename, output);
+                success(`Written: ${options.out}/${filename}`);
             }
         } catch (err) {
-            console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+            error(err instanceof Error ? err.message : String(err));
             process.exit(1);
         }
     });
