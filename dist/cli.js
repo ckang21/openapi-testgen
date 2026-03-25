@@ -13,19 +13,25 @@ program
     .option('--format <format>', 'Output format: jest, vitest, or yaml', 'jest')
     .option('--out <dir>', 'Output directory', './generated')
     .action(async (spec, options) => {
-    console.log(`Parsing spec: ${spec}...`);
-    const endpoints = await parseSpec(spec);
-    const groups = {};
-    for (const endpoint of endpoints) {
-        const resource = endpoint.path.split('/')[1] ?? 'root';
-        if (!groups[resource])
-            groups[resource] = [];
-        groups[resource].push(endpoint);
+    try {
+        console.log(`Parsing spec: ${spec}...`);
+        const endpoints = await parseSpec(spec);
+        const groups = {};
+        for (const endpoint of endpoints) {
+            const resource = endpoint.path.split('/')[1] ?? 'root';
+            if (!groups[resource])
+                groups[resource] = [];
+            groups[resource].push(endpoint);
+        }
+        for (const [resource, resourceEndpoints] of Object.entries(groups)) {
+            const output = generateTests(resourceEndpoints, options.format);
+            const filename = `${resource}.test.ts`;
+            await writeOutputFile(options.out, filename, output);
+        }
     }
-    for (const [resource, resourceEndpoints] of Object.entries(groups)) {
-        const output = generateTests(resourceEndpoints, options.format);
-        const filename = `${resource}.test.ts`;
-        await writeOutputFile(options.out, filename, output);
+    catch (err) {
+        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
     }
 });
 program.parse(process.argv);
