@@ -11,7 +11,9 @@ A CLI tool that ingests an OpenAPI/Swagger spec and automatically generates test
 - Accepts a Swagger/OpenAPI spec via **URL or local file** (JSON or YAML)
 - Parses all endpoints, HTTP methods, parameters, and response schemas
 - Generates test stubs for **Jest** or **Vitest**
-- Optionally uses **Claude AI** to generate meaningful assertions based on schema descriptions
+- Also outputs a raw **YAML** summary of all endpoints
+- Groups output files **by resource** (e.g. `pet.test.ts`, `user.test.ts`)
+- Colored terminal output with spinner via **chalk** and **ora**
 - Outputs a **GitHub Action** config so it runs automatically in CI
 
 ---
@@ -54,11 +56,6 @@ openapi-testgen generate ./openapi.yaml --format yaml
 openapi-testgen generate ./openapi.yaml --out ./tests/generated
 ```
 
-### Enable AI-generated assertions (requires ANTHROPIC_API_KEY)
-```bash
-openapi-testgen generate ./openapi.yaml --ai
-```
-
 ---
 
 ## Example Output
@@ -90,20 +87,17 @@ Given an endpoint like:
 import { describe, it, expect } from 'vitest';
 
 describe('GET /users/{id}', () => {
-  it('should return 200 with a valid user id', async () => {
-    // TODO: set up request
-    const response = await request.get('/users/some-id');
+  it('should return 200', async () => {
+    const response = await request.get('/users/{id}');
     expect(response.status).toBe(200);
   });
 
-  it('should return 404 when user is not found', async () => {
-    const response = await request.get('/users/nonexistent-id');
+  it('should return 404', async () => {
+    const response = await request.get('/users/{id}');
     expect(response.status).toBe(404);
   });
 });
 ```
-
-With `--ai`, the assertions are filled in based on the schema description using Claude.
 
 ---
 
@@ -114,20 +108,20 @@ openapi-testgen/
 ├── src/
 │   ├── cli.ts              # Entry point, command definitions (commander)
 │   ├── parser.ts           # Ingests and normalizes OpenAPI spec (swagger-parser)
-│   ├── generator.ts        # Builds test stubs from parsed spec
-│   ├── ai.ts               # Claude API integration for smart assertions
+│   ├── generator.ts        # Routes to the correct formatter based on --format
 │   ├── formatters/
 │   │   ├── jest.ts         # Jest output formatter
 │   │   ├── vitest.ts       # Vitest output formatter
 │   │   └── yaml.ts         # Raw YAML output formatter
 │   └── utils/
 │       ├── fileWriter.ts   # Writes output files to disk
-│       └── logger.ts       # Rich terminal output (chalk)
+│       └── logger.ts       # Rich terminal output (chalk + ora)
 ├── tests/
 │   └── generator.test.ts
 ├── .github/
 │   └── workflows/
 │       └── testgen.yml     # GitHub Action config
+├── vitest.config.ts
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -137,7 +131,7 @@ openapi-testgen/
 
 ## GitHub Action
 
-Add this to your repo to auto-generate test stubs on every push:
+Add this to your repo to auto-generate test stubs whenever your spec changes:
 
 ```yaml
 # .github/workflows/testgen.yml
@@ -157,19 +151,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: npx openapi-testgen generate ./openapi.yaml --out ./tests/generated
+      - run: npm install
+      - run: npm run build
+      - run: node dist/cli.js generate ./openapi.yaml --out ./tests/generated
       - uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: 'chore: regenerate API test stubs'
 ```
-
----
-
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Only with `--ai` | Your Anthropic API key for AI-generated assertions |
 
 ---
 
@@ -181,8 +169,8 @@ jobs:
 | CLI framework | Commander.js |
 | Spec parsing | swagger-parser |
 | Terminal output | chalk + ora |
-| AI assertions | Anthropic Claude API |
-| Test output | Jest / Vitest |
+| Test output | Jest / Vitest / YAML |
+| Testing | Vitest |
 | CI | GitHub Actions |
 
 ---
@@ -194,12 +182,13 @@ jobs:
 - [ ] Support for multiple spec files in one run
 - [ ] Interactive mode (`openapi-testgen init`) for first-time setup
 - [ ] Config file (`.testgenrc`) for persistent preferences
+- [ ] AI-generated assertions via Claude API (`--ai` flag)
 
 ---
 
 ## Why This Exists
 
-At FamilySearch, OpenAPI/Swagger test YAML files were being written by hand from the spec URL — a slow, error-prone process. This tool was originally built to solve that exact problem and was shipped directly into the CI/CD pipeline before the internship ended.
+At FamilySearch, OpenAPI/Swagger test files were being written by hand from the spec URL — a slow, error-prone process. This tool was originally built to solve that exact problem and was shipped directly into the CI/CD pipeline before the internship ended.
 
 This is a cleaned-up, open-source version of that idea.
 
